@@ -1,0 +1,24 @@
+# ============================================================================
+# terraform.tfvars.example —— 复制为 terraform.tfvars 后填写
+# 计费相关规格已在 variables.tf 显式写死，这里仅需填账号/凭据类参数。
+# ============================================================================
+
+region        = "cn-north-4"
+project_name  = "devops-agent-5g"
+cluster_name  = "devops-agent-5g"
+domain_name   = "your-huaweicloud-domain"   # IAM 委托归属域（控制台「我的凭证 / 域名」）
+
+# 以下三项由 deploy.sh 创建只读 SA 后自动回写；首次 apply 可留空，
+# 跑完 deploy.sh 后把 kubeconfig 里的 server / ca / token 填回再 apply 一次。
+kube_apiserver = ""
+kube_ca_b64    = ""
+kube_token     = ""
+
+# 盘古大模型部署名（MaaS 上实际部署/开通的模型），按需修改
+maas_model_name = "pangu-nlp-2024-12"
+
+# ---- 计费规格（variables.tf 默认值，按目标 region 实际可用值确认后覆盖）----
+# cce_flavor_id = "cce.s1.small"
+# node_flavor   = "s6.large.2"
+# dcs_flavor    = "redis.single.xu1.tiny.128"
+# elb_flavor_id = "elb.p3s2.1small1"

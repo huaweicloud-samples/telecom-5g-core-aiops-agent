@@ -1,0 +1,184 @@
+# ============================================================================
+# CES 告警规则 —— 模拟运营商 NOC 告警面板（6 个）
+#
+# 结构说明（provider 1.96 实测）：
+#   metric   块：只放 namespace（SYS.DCS / PAAS.AOM 等）
+#   resources 块：放 dimensions（资源维度）
+#   condition 块：放 metric_name / period / filter / comparison_operator / value / count / unit
+# 说明：Pod/节点/HPA 类告警基于 AOM 容器洞察（namespace PAAS.AOM），指标名与维度
+#   随版本略有差异，apply 后可到 CES 控制台按实际指标名微调，不影响整体 demo 与智能体
+#   （智能体走 AOM API 实时查询，不依赖这些告警）。
+# ============================================================================
+
+# ---- 基线：Redis 引擎 CPU（对应 5G-Core-Redis-Engine-CPU-High）----
+resource "huaweicloud_ces_alarmrule" "redis_cpu_high" {
+  alarm_name = "5G-Core-Redis-Engine-CPU-High"
+
+  metric {
+    namespace = "SYS.DCS"
+  }
+
+  resources {
+    dimensions {
+      name  = "instance_id"
+      value = huaweicloud_dcs_instance.redis.id
+    }
+  }
+
+  condition {
+    period              = 300
+    filter              = "average"
+    comparison_operator = ">="
+    value               = 70
+    count               = 2
+    unit                = "%"
+    metric_name         = "cpu_util"
+  }
+}
+
+# ---- Scenario 1：NRF 失去 Redis（连接数跌 0，对应 5G-Core-NRF-Redis-Disconnected）----
+resource "huaweicloud_ces_alarmrule" "nrf_redis_disconnected" {
+  alarm_name = "5G-Core-NRF-Redis-Disconnected"
+
+  metric {
+    namespace = "SYS.DCS"
+  }
+
+  resources {
+    dimensions {
+      name  = "instance_id"
+      value = huaweicloud_dcs_instance.redis.id
+    }
+  }
+
+  condition {
+    period              = 300
+    filter              = "average"
+    comparison_operator = "<="
+    value               = 1
+    count               = 1
+    unit                = "count"
+    metric_name         = "connections"
+  }
+}
+
+# ---- Top-level：NRF 就绪 Pod 数 < 2（对应 5G-Core-NF-Not-Ready）[AOM best-effort]----
+resource "huaweicloud_ces_alarmrule" "nf_not_ready" {
+  alarm_name = "5G-Core-NF-Not-Ready"
+
+  metric {
+    namespace = "PAAS.AOM"
+  }
+
+  resources {
+    dimensions {
+      name  = "cluster_id"
+      value = huaweicloud_cce_cluster.main.id
+    }
+    dimensions {
+      name  = "namespace"
+      value = "demo-5g"
+    }
+  }
+
+  condition {
+    period              = 300
+    filter              = "min"
+    comparison_operator = "<"
+    value               = 2
+    count               = 1
+    metric_name         = "kubernetes_state_pod_ready" # 请按控制台实际指标名确认
+  }
+}
+
+# ---- Scenario 2/3：AMF 不可用副本（对应 5G-Core-AMF-Replicas-Unavailable）[AOM best-effort]----
+resource "huaweicloud_ces_alarmrule" "amf_replicas_unavailable" {
+  alarm_name = "5G-Core-AMF-Replicas-Unavailable"
+
+  metric {
+    namespace = "PAAS.AOM"
+  }
+
+  resources {
+    dimensions {
+      name  = "cluster_id"
+      value = huaweicloud_cce_cluster.main.id
+    }
+    dimensions {
+      name  = "namespace"
+      value = "demo-5g"
+    }
+    dimensions {
+      name  = "workload_name"
+      value = "amf"
+    }
+  }
+
+  condition {
+    period              = 300
+    filter              = "max"
+    comparison_operator = ">"
+    value               = 0
+    count               = 2
+    metric_name         = "kubernetes_state_deployment_replicas_unavailable"
+  }
+}
+
+# ---- Scenario 2：节点 CPU 饱和（对应 5G-Core-Cluster-Node-Capacity-Saturated）[AOM best-effort]----
+resource "huaweicloud_ces_alarmrule" "cluster_node_saturated" {
+  alarm_name = "5G-Core-Cluster-Node-Capacity-Saturated"
+
+  metric {
+    namespace = "PAAS.AOM"
+  }
+
+  resources {
+    dimensions {
+      name  = "cluster_id"
+      value = huaweicloud_cce_cluster.main.id
+    }
+  }
+
+  condition {
+    period              = 300
+    filter              = "average"
+    comparison_operator = ">="
+    value               = 80
+    count               = 2
+    unit                = "%"
+    metric_name         = "node_cpu_usage"
+  }
+}
+
+# ---- Scenario 4：AMF HPA 抖动（对应 5G-Core-AMF-HPA-Scaling-Storm）[AOM best-effort]----
+resource "huaweicloud_ces_alarmrule" "amf_scaling_oscillation" {
+  alarm_name = "5G-Core-AMF-HPA-Scaling-Storm"
+
+  metric {
+    namespace = "PAAS.AOM"
+  }
+
+  resources {
+    dimensions {
+      name  = "cluster_id"
+      value = huaweicloud_cce_cluster.main.id
+    }
+    dimensions {
+      name  = "namespace"
+      value = "demo-5g"
+    }
+    dimensions {
+      name  = "workload_name"
+      value = "amf"
+    }
+  }
+
+  condition {
+    period              = 300
+    filter              = "max"
+    comparison_operator = ">"
+    value               = 6
+    count               = 1
+    metric_name         = "kubernetes_state_hpa_status_desired_replicas"
+  }
+}

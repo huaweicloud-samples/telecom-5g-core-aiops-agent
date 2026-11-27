@@ -1,0 +1,38 @@
+# =============================================================================
+# CCE ELB Ingress — Exposes AMF as the N2 entry point (simulates RAN → Core)
+# Used by the load generator to send UE registration requests.
+#
+# CCE ELB Ingress binds a pre-created performance ELB via the
+# `kubernetes.io/elb.id` annotation. The ELB is created by Terraform in
+# infra/ingress.tf, and deploy.sh injects the real ELB ID.
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: 5g-core-ingress
+  namespace: demo-5g
+  annotations:
+    # Bind to the performance ELB provisioned by Terraform (infra/ingress.tf).
+    # deploy.sh replaces this placeholder with the real ELB ID.
+    kubernetes.io/elb.id: "REPLACE_WITH_ELB_ID"
+    # 独享型 ELB 必须显式声明 elb.class=performance（CCE 默认 union，会与 elb.id 冲突）
+    kubernetes.io/elb.class: performance
+    # Expose publicly (internet-facing). Use "inner" for private-only.
+    kubernetes.io/elb.scheme: internet
+    # Health check path on the backend service.
+    kubernetes.io/elb.health-check-flag: "on"
+    kubernetes.io/elb.health-check-option: '{"protocol":"TCP","port":8080}'
+spec:
+  # CCE ELB Ingress uses the built-in "cce" ingress class; the ELB is bound
+  # via the annotation above, not via ingressClassName.
+  ingressClassName: cce
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: amf
+                port:
+                  number: 8080

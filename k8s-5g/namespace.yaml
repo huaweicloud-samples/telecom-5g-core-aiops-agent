@@ -1,0 +1,32 @@
+# =============================================================================
+# Namespace + ConfigMap for the 5G Core demo
+# -----------------------------------------------------------------------------
+# Notes (Huawei Cloud):
+#  - `redis-host` is injected by deploy.sh from the Terraform
+#    `redis_connect_address` output of the DCS Redis instance.
+#  - The 5G NF stubs are provider-agnostic and never consume a message queue,
+#    so no queue endpoint placeholder is present here.
+#  - NF service endpoints are Kubernetes-internal and unchanged.
+# =============================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: demo-5g
+  labels:
+    app.kubernetes.io/part-of: 5g-core-demo
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: core-config
+  namespace: demo-5g
+data:
+  # UPDATE after terraform apply: same DCS Redis address from existing infra
+  redis-host: "REPLACE_WITH_REDIS_ENDPOINT"
+  redis-port: "6379"
+  # NF service endpoints (K8s internal)
+  nrf-endpoint: "http://nrf:8080"
+  amf-endpoint: "http://amf:8080"
+  smf-endpoint: "http://smf:8080"
+  upf-endpoint: "http://upf:8080"
+  pcf-endpoint: "http://pcf:8080"
