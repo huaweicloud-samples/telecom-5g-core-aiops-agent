@@ -1,0 +1,14 @@
+# AIOps 智能体函数依赖（由 build_and_deploy.py 以平台锁定的纯 Python 轮子安装）
+# 函数运行期：Python3.9 / Linux x86_64（manylinux2014_x86_64）
+#
+# 注意：obs / cryptography 原生模块华为云 FGS 运行环境已内置，不要列入——
+# 自带反而会触发「日志全空」崩溃。
+
+# 华为云 SDK（FGS 不内置，必须自带）
+huaweicloudsdkcore
+huaweicloudsdkces
+huaweicloudsdkvpc
+huaweicloudsdkcts
+
+# 盘古大模型 MaaS（OpenAI 兼容端点）调用
+openai
